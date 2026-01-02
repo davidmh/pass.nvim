@@ -1,0 +1,15 @@
+{
+  "fnl/*.fnl": {
+    "alternate": ["lua/{}.lua"]
+  },
+  "lua/*.lua": {
+    "alternate": ["fnl/{}.fnl"]
+  },
+  "*.fnl": {
+    "alternate": ["{}.lua"]
+  },
+  "*.lua": {
+    "alternate": ["{}.fnl"]
+  }
+}
+
