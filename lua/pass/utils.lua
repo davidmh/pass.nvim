@@ -1,25 +1,102 @@
 -- [nfnl] fnl/pass/utils.fnl
 local M = {}
 local notification_chrome = {icon = "\240\159\155\130", title = "pass.nvim"}
+local function read_lines(path)
+  if (vim.fn.filereadable(path) == 1) then
+    return vim.fn.readfile(path)
+  else
+    return {}
+  end
+end
+local function get_gpg_ids()
+  local store_dir = M["get-password-store-dir"]()
+  return read_lines((store_dir .. ".gpg-id"))
+end
+local function get_keygrips(gpg_id)
+  local result = vim.system({"gpg", "--list-secret-keys", "--with-colons", gpg_id}, {text = true}):wait()
+  if (result.code == 0) then
+    local grips = {}
+    for line in result.stdout:gmatch("[^\r\n]+") do
+      if line:match("^grp:") then
+        local fields = vim.split(line, ":")
+        table.insert(grips, fields[10])
+      else
+      end
+    end
+    return grips
+  else
+    return {}
+  end
+end
+local function is_cached_3f(keygrip)
+  local result = vim.system({"gpg-connect-agent", ("KEYINFO " .. keygrip), "/bye"}, {text = true}):wait()
+  if (result.code == 0) then
+    local lines = vim.split(vim.trim(result.stdout), "\n")
+    for _, line in ipairs(lines) do
+      local case_4_ = vim.split(line, " ")
+      if ((_G.type(case_4_) == "table") and (case_4_[1] == "S") and (case_4_[2] == "KEYINFO") and true and true and true and true and (case_4_[7] == "1")) then
+        local _0 = case_4_[3]
+        local _1 = case_4_[4]
+        local _2 = case_4_[5]
+        local _3 = case_4_[6]
+        return true
+      else
+      end
+    end
+  else
+  end
+  return false
+end
+M["verify-gpg-auth"] = function()
+  local ids = get_gpg_ids()
+  if vim.tbl_isempty(ids) then
+  else
+    for _, id in ipairs(ids) do
+      local grips = get_keygrips(id)
+      for _0, grip in ipairs(grips) do
+        if is_cached_3f(grip) then
+          return true
+        else
+        end
+      end
+    end
+  end
+  return false
+end
+M["unlock-gpg-key"] = function()
+  local ids = get_gpg_ids()
+  if vim.tbl_isempty(ids) then
+    return false
+  else
+    local key_id = vim.trim(ids[1])
+    local result = vim.system({"gpg", "--clearsign", "--quiet", "--no-tty", "--default-key", key_id}, {text = true, stdin = "unlock check"}):wait()
+    return (result.code == 0)
+  end
+end
 M["get-password-store-dir"] = function()
-  return (vim.env.PASSWORD_STORE_DIR or (vim.env.HOME .. "/.password-store/"))
+  local dir = (vim.env.PASSWORD_STORE_DIR or (vim.env.HOME .. "/.password-store/"))
+  if (dir:sub(-1) == "/") then
+    return dir
+  else
+    return (dir .. "/")
+  end
 end
 M["list-passwords"] = function()
   local store_dir = M["get-password-store-dir"]()
   local extension = ".gpg$"
   local files
-  local function _1_(name)
+  local function _11_(name)
     return name:match(extension)
   end
-  files = vim.fs.find(_1_, {path = store_dir, limit = math.huge})
-  local function _2_(file)
+  files = vim.fs.find(_11_, {path = store_dir, limit = math.huge})
+  local function _12_(file)
     return {text = string.gsub(string.sub(file, (#store_dir + 1), #file), extension, "")}
   end
-  return vim.tbl_map(_2_, files)
+  return vim.tbl_map(_12_, files)
 end
-local function run(_3_)
-  local cmd = _3_.cmd
-  local stdin = _3_.stdin
+local function run(_13_)
+  local cmd = _13_.cmd
+  local stdin = _13_.stdin
   local result = vim.system(cmd, {text = true, stdin = stdin}):wait()
   if (result.code == 0) then
     return result.stdout:gsub("\n$", "")

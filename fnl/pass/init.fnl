@@ -5,6 +5,12 @@
 (local M {})
 
 (fn M.open []
+  (when (not (utils.verify-gpg-auth))
+    (vim.notify "GPG key locked. Attempting to unlock..." vim.log.levels.INFO {:title "pass.nvim"})
+    (when (not (utils.unlock-gpg-key))
+      (utils.error "Failed to unlock GPG key.")
+      (lua :return)))
+
   (local (ok? snacks-picker) (pcall require :snacks.picker))
 
   (when (not ok?)

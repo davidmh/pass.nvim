@@ -35,8 +35,9 @@ M.edit = function(picker, entry)
   local path = entry.text
   local ok_3f, result = pcall(utils.show, path)
   if not ok_3f then
-    return
+    utils.error(("Failed to read: " .. path))
   else
+    return
   end
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("filetype", "pass", {scope = "local", buf = buf})

@@ -35,7 +35,7 @@
   (local (ok? result) (pcall utils.show path))
 
   (if (not ok?)
-    ; TODO: notify?
+    (utils.error (.. "Failed to read: " path))
     (lua :return))
 
   ;; create a scratch buffer

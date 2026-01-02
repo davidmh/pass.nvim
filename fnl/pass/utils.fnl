@@ -3,9 +3,76 @@
 (local notification-chrome {:icon :🛂
                             :title :pass.nvim})
 
+(fn read-lines [path]
+  (if (= (vim.fn.filereadable path) 1)
+    (vim.fn.readfile path)
+    []))
+
+(fn get-gpg-ids []
+  (local store-dir (M.get-password-store-dir))
+  (read-lines (.. store-dir ".gpg-id")))
+
+(fn get-keygrips [gpg-id]
+  (let [result (-> [:gpg :--list-secret-keys :--with-colons gpg-id]
+                   (vim.system {:text true})
+                   (: :wait))]
+    (if (= result.code 0)
+      (let [grips []]
+        (each [line (result.stdout:gmatch "[^\r\n]+")]
+          (when (line:match "^grp:")
+            (let [fields (vim.split line ":")]
+              (table.insert grips (. fields 10)))))
+        grips)
+      [])))
+
+(fn is-cached? [keygrip]
+  "Query the agent for the key's status. The 7th field in the response
+  indicates if the key is currently cached in memory (1) or not."
+
+  ;; Connect using the given key grip and exit immediately
+  (local result (-> [:gpg-connect-agent (.. "KEYINFO " keygrip) "/bye"]
+                    (vim.system {:text true})
+                    (: :wait)))
+  (when (= result.code 0)
+    (local lines (-> result.stdout
+                     (vim.trim)
+                     (vim.split "\n")))
+    (each [_ line (ipairs lines)]
+      (case (vim.split line " ")
+        ["S" "KEYINFO" _ _ _ _ "1"] (lua "return true"))))
+  false)
+
+(fn M.verify-gpg-auth []
+  "Checks if at least one GPG key required for the store is unlocked."
+  (local ids (get-gpg-ids))
+
+  (if (vim.tbl_isempty ids)
+    true
+    (each [_ id (ipairs ids)]
+      (local grips (get-keygrips id))
+      (each [_ grip (ipairs grips)]
+        (when (is-cached? grip)
+          (lua "return true")))))
+  false)
+
+(fn M.unlock-gpg-key []
+  "Triggers a dummy signing to prompt for the GPG password via pinentry."
+  (local ids (get-gpg-ids))
+  (if (vim.tbl_isempty ids)
+      false
+      (let [key-id (vim.trim (. ids 1))
+            result (-> [:gpg :--clearsign :--quiet :--no-tty :--default-key key-id]
+                       (vim.system {:text true
+                                    :stdin "unlock check"})
+                       (: :wait))]
+         (= result.code 0))))
+
 (fn M.get-password-store-dir []
-  (or vim.env.PASSWORD_STORE_DIR
-      (.. vim.env.HOME "/.password-store/")))
+  (let [dir (or vim.env.PASSWORD_STORE_DIR
+                (.. vim.env.HOME "/.password-store/"))]
+    (if (= (dir:sub -1) "/")
+      dir
+      (.. dir "/"))))
 
 (fn M.list-passwords []
   (local store-dir (M.get-password-store-dir))
