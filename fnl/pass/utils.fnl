@@ -139,4 +139,9 @@
   (when vim.g.pass_debug
     (vim.notify msg vim.log.levels.ERROR notification-chrome)))
 
+(fn M.prompt-bool [question action]
+  (vim.ui.select [:Yes :No]
+                 {:prompt question}
+                 action))
+
 M

@@ -5,7 +5,8 @@
 
 (fn update-password-on-leave [{: buf
                                : old-content
-                               : path}]
+                               : path
+                               : picker}]
   (local new-lines (vim.api.nvim_buf_get_lines buf 0 -1 false))
   (local new-content (table.concat new-lines "\n"))
 
@@ -15,7 +16,7 @@
     (lua :return))
 
   (when (= new-content "")
-    (M.delete {:text path})
+    (vim.schedule #(M.delete picker {:text path}))
     (lua :return))
 
   (local (ok?) (pcall utils.save-content path new-content))
@@ -28,15 +29,24 @@
 
   nil)
 
-(fn M.edit [entry]
-  (if (not entry) (lua :return))
+(fn M.edit [picker entry]
+  (local path (or (and entry entry.text)
+                  picker.finder.filter.pattern))
 
-  (local path entry.text)
+  (picker:close)
+
+  (if (= (vim.trim path) "")
+    (lua :return))
+
   (local (ok? result) (pcall utils.show path))
 
-  (when (not ok?)
-    (utils.error (.. "Failed to read: " path))
-    (lua :return))
+  (local content (if ok?
+                  result
+                  ""))
+
+  (local label (if ok?
+                   "Edit"
+                   "Insert"))
 
   ;; create a scratch buffer
   (local buf (vim.api.nvim_create_buf false true))
@@ -50,7 +60,7 @@
                               0
                               -1
                               false
-                              (vim.split result "\n"))
+                              (vim.split content "\n"))
 
   ;; create a floating window
   (local width (math.min 80 (- vim.o.columns 4)))
@@ -65,7 +75,7 @@
                      : col
                      :style :minimal
                      :border :rounded
-                     :title (.. " Edit " path " ")
+                     :title (.. " " label ": " path " ")
                      :title_pos :center})
 
   (local win (vim.api.nvim_open_win buf true win-config))
@@ -76,7 +86,8 @@
   (vim.api.nvim_create_autocmd :BufWinLeave {:buffer buf
                                              :callback #(update-password-on-leave {: buf
                                                                                    : path
-                                                                                   :old-content result})}))
+                                                                                   : picker
+                                                                                   :old-content content})}))
 
 (fn M.rename [picker entry]
   (if (not entry) (lua :return))
@@ -95,18 +106,24 @@
       (utils.info (.. "Renamed " old-path " to " new-path))
       (utils.error (.. "Failed to rename " old-path)))
 
-    ; Open a fresh picker
     (local pattern picker.finder.filter.pattern)
-    (M.open pattern)
 
     ; Close the old one
-    (picker:close))
+    (picker:close)
+
+    ; Open a fresh picker
+    (M.open pattern))
 
   (vim.ui.input {:prompt (.. "Rename " old-path)
                  :default old-path}
                 on-rename))
 
-(fn M.delete [entry]
+(fn M.delete [picker entry]
+  (local pattern (or
+                   picker.finder.filter.pattern
+                   ""))
+  (picker:close)
+
   (if (not entry) (lua :return))
 
   (local path entry.text)
@@ -117,7 +134,8 @@
                       (local (ok?) (pcall utils.rm path))
                       (if ok?
                         (utils.info (.. "Deleted: " path))
-                        (utils.error (.. "Failed to delete: " path)))))))
+                        (utils.error (.. "Failed to delete: " path)))
+                      (vim.schedule #(M.open pattern))))))
 
 (fn M.copy [entry]
   "Copy the password into the system clipboard"
@@ -143,6 +161,15 @@
     (picker:close)
     (action entry)))
 
+
+(fn M.insert [picker]
+  (local pattern picker.finder.filter.pattern)
+  (picker:close)
+  (vim.ui.input {:prompt "New password's path"
+                 :default pattern}
+                (fn [new-path]
+                  (M.edit picker {:text new-path}))))
+
 (fn M.open [pattern]
   (when (not (utils.verify-gpg-auth))
     (utils.debug "GPG key locked. Attempting to unlock...")
@@ -164,14 +191,14 @@
                        :win {:input {:keys {:<c-r> (tx :rename {:mode [:i :n]})
                                             :<c-d> (tx :delete {:mode [:i :n]})
                                             :<c-e> (tx :edit {:mode [:i :n]})
+                                            :<c-i> (tx :insert {:mode [:i :n]})
                                             :<c-l> (tx :log {:mode [:i :n]})}}}
                        :confirm :copy
                        :actions {:rename M.rename
-                                 :delete (auto-close-picker M.delete)
-                                 :edit (auto-close-picker M.edit)
+                                 :insert M.insert
+                                 :edit M.edit
+                                 :delete M.delete
                                  :log (auto-close-picker M.log)
                                  :copy (auto-close-picker M.copy)}}))
-
-
 
 M

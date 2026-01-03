@@ -140,4 +140,7 @@ M.debug = function(msg)
     return nil
   end
 end
+M["prompt-bool"] = function(question, action)
+  return vim.ui.select({"Yes", "No"}, {prompt = question}, action)
+end
 return M
