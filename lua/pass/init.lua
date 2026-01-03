@@ -4,7 +4,7 @@ local actions = require("pass.actions")
 local M = {}
 M.open = function()
   if not utils["verify-gpg-auth"]() then
-    vim.notify("GPG key locked. Attempting to unlock...", vim.log.levels.INFO, {title = "pass.nvim"})
+    utils.debug("GPG key locked. Attempting to unlock...")
     if not utils["unlock-gpg-key"]() then
       utils.error("Failed to unlock GPG key.")
       return
@@ -14,7 +14,7 @@ M.open = function()
   end
   local ok_3f, snacks_picker = pcall(require, "snacks.picker")
   if not ok_3f then
-    M.error("snacks.nvim is required")
+    utils.error("snacks.nvim is required")
     return
   else
   end

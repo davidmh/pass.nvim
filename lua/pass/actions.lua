@@ -8,7 +8,7 @@ local function update_password_on_leave(_1_)
   local new_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local new_content = table.concat(new_lines, "\n")
   if (vim.trim(new_content) == vim.trim(old_content)) then
-    utils.info("The password didn't change")
+    utils.debug("The password didn't change")
     return
   else
   end

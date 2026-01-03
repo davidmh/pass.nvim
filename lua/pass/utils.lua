@@ -133,4 +133,11 @@ end
 M.error = function(msg)
   return vim.notify(msg, vim.log.levels.ERROR, notification_chrome)
 end
+M.debug = function(msg)
+  if vim.g.pass_debug then
+    return vim.notify(msg, vim.log.levels.ERROR, notification_chrome)
+  else
+    return nil
+  end
+end
 return M

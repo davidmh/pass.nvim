@@ -10,7 +10,7 @@
 
   (when (= (vim.trim new-content)
            (vim.trim old-content))
-    (utils.info "The password didn't change")
+    (utils.debug "The password didn't change")
     (lua :return))
 
   (when (= new-content "")

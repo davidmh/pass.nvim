@@ -6,7 +6,7 @@
 
 (fn M.open []
   (when (not (utils.verify-gpg-auth))
-    (vim.notify "GPG key locked. Attempting to unlock..." vim.log.levels.INFO {:title "pass.nvim"})
+    (utils.debug "GPG key locked. Attempting to unlock...")
     (when (not (utils.unlock-gpg-key))
       (utils.error "Failed to unlock GPG key.")
       (lua :return)))
@@ -14,7 +14,7 @@
   (local (ok? snacks-picker) (pcall require :snacks.picker))
 
   (when (not ok?)
-    (M.error "snacks.nvim is required")
+    (utils.error "snacks.nvim is required")
     (lua :return))
 
   (snacks-picker.pick {:title "Password Store"

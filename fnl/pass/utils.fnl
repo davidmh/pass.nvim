@@ -135,4 +135,8 @@
 (fn M.error [msg]
   (vim.notify msg vim.log.levels.ERROR notification-chrome))
 
+(fn M.debug [msg]
+  (when vim.g.pass_debug
+    (vim.notify msg vim.log.levels.ERROR notification-chrome)))
+
 M
