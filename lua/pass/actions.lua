@@ -13,7 +13,7 @@ local function update_password_on_leave(_1_)
   else
   end
   if (new_content == "") then
-    M.delete(nil, {text = path})
+    M.delete({text = path})
     return
   else
   end
@@ -26,8 +26,7 @@ local function update_password_on_leave(_1_)
   end
   return nil
 end
-M.edit = function(picker, entry)
-  picker:close()
+M.edit = function(entry)
   if not entry then
     return
   else
@@ -36,8 +35,8 @@ M.edit = function(picker, entry)
   local ok_3f, result = pcall(utils.show, path)
   if not ok_3f then
     utils.error(("Failed to read: " .. path))
-  else
     return
+  else
   end
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("filetype", "pass", {scope = "local", buf = buf})
@@ -57,7 +56,6 @@ M.edit = function(picker, entry)
   return vim.api.nvim_create_autocmd("BufWinLeave", {buffer = buf, callback = _7_})
 end
 M.rename = function(picker, entry)
-  picker:close()
   if not entry then
     return
   else
@@ -70,24 +68,23 @@ M.rename = function(picker, entry)
     end
     local ok_3f = pcall(utils.mv, old_path, new_path)
     if ok_3f then
-      return utils.info(("Renamed " .. old_path .. " to " .. new_path))
+      utils.info(("Renamed " .. old_path .. " to " .. new_path))
     else
-      return utils.error(("Failed to rename " .. old_path))
+      utils.error(("Failed to rename " .. old_path))
     end
+    local pattern = picker.finder.filter.pattern
+    M.open(pattern)
+    return picker:close()
   end
   return vim.ui.input({prompt = ("Rename " .. old_path), default = old_path}, on_rename)
 end
-M.delete = function(picker, entry)
-  if picker then
-    picker:close()
-  else
-  end
+M.delete = function(entry)
   if not entry then
     return
   else
   end
   local path = entry.text
-  local function _13_(choice)
+  local function _12_(choice)
     if (choice == "Yes") then
       local ok_3f = pcall(utils.rm, path)
       if ok_3f then
@@ -99,10 +96,9 @@ M.delete = function(picker, entry)
       return nil
     end
   end
-  return vim.ui.select({"Yes", "No"}, {prompt = ("Delete " .. path .. "?")}, _13_)
+  return vim.ui.select({"Yes", "No"}, {prompt = ("Delete " .. path .. "?")}, _12_)
 end
-M.copy = function(picker, entry)
-  picker:close()
+M.copy = function(entry)
   if not entry then
     return
   else
@@ -115,5 +111,30 @@ end
 M.log = function()
   local snacks_picker = require("snacks.picker")
   return snacks_picker.git_log({cwd = utils["get-password-store-dir"]()})
+end
+local function auto_close_picker(action)
+  local function _16_(picker, entry)
+    picker:close()
+    return action(entry)
+  end
+  return _16_
+end
+M.open = function(pattern)
+  if not utils["verify-gpg-auth"]() then
+    utils.debug("GPG key locked. Attempting to unlock...")
+    if not utils["unlock-gpg-key"]() then
+      utils.error("Failed to unlock GPG key.")
+      return
+    else
+    end
+  else
+  end
+  local ok_3f, snacks_picker = pcall(require, "snacks.picker")
+  if not ok_3f then
+    utils.error("snacks.nvim is required")
+    return
+  else
+  end
+  return snacks_picker.pick({title = "Password Store", pattern = pattern, items = utils["list-passwords"](), format = "text", layout = {preset = "select"}, win = {input = {keys = {["<c-r>"] = {"rename", mode = {"i", "n"}}, ["<c-d>"] = {"delete", mode = {"i", "n"}}, ["<c-e>"] = {"edit", mode = {"i", "n"}}, ["<c-l>"] = {"log", mode = {"i", "n"}}}}}, confirm = "copy", actions = {rename = M.rename, delete = auto_close_picker(M.delete), edit = auto_close_picker(M.edit), log = auto_close_picker(M.log), copy = auto_close_picker(M.copy)}})
 end
 return M

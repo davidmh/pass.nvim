@@ -1,3 +1,4 @@
+(import-macros {: tx} :pass.macros)
 (local utils (require :pass.utils))
 
 (local M {})
@@ -14,7 +15,7 @@
     (lua :return))
 
   (when (= new-content "")
-    (M.delete nil {:text path})
+    (M.delete {:text path})
     (lua :return))
 
   (local (ok?) (pcall utils.save-content path new-content))
@@ -27,14 +28,13 @@
 
   nil)
 
-(fn M.edit [picker entry]
-  (picker:close)
+(fn M.edit [entry]
   (if (not entry) (lua :return))
 
   (local path entry.text)
   (local (ok? result) (pcall utils.show path))
 
-  (if (not ok?)
+  (when (not ok?)
     (utils.error (.. "Failed to read: " path))
     (lua :return))
 
@@ -79,7 +79,6 @@
                                                                                    :old-content result})}))
 
 (fn M.rename [picker entry]
-  (picker:close)
   (if (not entry) (lua :return))
 
   (local old-path entry.text)
@@ -94,14 +93,20 @@
 
     (if ok?
       (utils.info (.. "Renamed " old-path " to " new-path))
-      (utils.error (.. "Failed to rename " old-path))))
+      (utils.error (.. "Failed to rename " old-path)))
+
+    ; Open a fresh picker
+    (local pattern picker.finder.filter.pattern)
+    (M.open pattern)
+
+    ; Close the old one
+    (picker:close))
 
   (vim.ui.input {:prompt (.. "Rename " old-path)
                  :default old-path}
                 on-rename))
 
-(fn M.delete [picker entry]
-  (if picker (picker:close))
+(fn M.delete [entry]
   (if (not entry) (lua :return))
 
   (local path entry.text)
@@ -114,10 +119,9 @@
                         (utils.info (.. "Deleted: " path))
                         (utils.error (.. "Failed to delete: " path)))))))
 
-(fn M.copy [picker entry]
+(fn M.copy [entry]
   "Copy the password into the system clipboard"
 
-  (picker:close)
   (if (not entry) (lua :return))
 
   (local path entry.text)
@@ -133,5 +137,41 @@
   (local snacks-picker (require :snacks.picker))
 
   (snacks-picker.git_log {:cwd (utils.get-password-store-dir)}))
+
+(fn auto-close-picker [action]
+  (fn [picker entry]
+    (picker:close)
+    (action entry)))
+
+(fn M.open [pattern]
+  (when (not (utils.verify-gpg-auth))
+    (utils.debug "GPG key locked. Attempting to unlock...")
+    (when (not (utils.unlock-gpg-key))
+      (utils.error "Failed to unlock GPG key.")
+      (lua :return)))
+
+  (local (ok? snacks-picker) (pcall require :snacks.picker))
+
+  (when (not ok?)
+    (utils.error "snacks.nvim is required")
+    (lua :return))
+
+  (snacks-picker.pick {:title "Password Store"
+                       :pattern pattern
+                       :items (utils.list-passwords)
+                       :format :text
+                       :layout {:preset :select}
+                       :win {:input {:keys {:<c-r> (tx :rename {:mode [:i :n]})
+                                            :<c-d> (tx :delete {:mode [:i :n]})
+                                            :<c-e> (tx :edit {:mode [:i :n]})
+                                            :<c-l> (tx :log {:mode [:i :n]})}}}
+                       :confirm :copy
+                       :actions {:rename M.rename
+                                 :delete (auto-close-picker M.delete)
+                                 :edit (auto-close-picker M.edit)
+                                 :log (auto-close-picker M.log)
+                                 :copy (auto-close-picker M.copy)}}))
+
+
 
 M

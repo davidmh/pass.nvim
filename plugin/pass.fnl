@@ -1,5 +1,5 @@
-(fn open-picker []
+(fn open-picker [{: args}]
   (local pass (require :pass))
-  (pass.open))
+  (pass.open args))
 
-(vim.api.nvim_create_user_command :Pass open-picker {:nargs 0})
+(vim.api.nvim_create_user_command :Pass open-picker {:nargs :?})
