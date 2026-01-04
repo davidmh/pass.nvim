@@ -1,6 +1,6 @@
 # pass.nvim
 
-A neovim [snacks] picker for [pass], the standard unix password manager.
+A Neovim integration (and [snacks] picker) for [pass], the standard unix password manager.
 
 ## Installation
 
@@ -9,14 +9,27 @@ Install with your favorite package manager. For example, using [lazy.nvim]:
 ```lua
 {
   "davidmh/pass.nvim",
-  dependencies = { "folke/snacks.nvim" },
+  dependencies = { "folke/snacks.nvim" }, -- optional
   cmd = "Pass",
 }
 ```
 
 ## Usage
 
-Run the command `:Pass` to open the password picker.
+The `:Pass` command provides six subcommands
+
+- `:Pass copy`
+- `:Pass edit`
+- `:Pass insert`
+- `:Pass delete`
+- `:Pass rename`
+- `:Pass log`
+
+All of them, except for `log` take in a password path as the third positional
+argument.
+
+The [snacks] picker can be invoked by running the command `:Pass` without a
+subcommand.
 
 While in the picker, the following mappings are available:
 

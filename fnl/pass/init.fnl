@@ -32,9 +32,9 @@
 
 (fn M.edit [picker entry]
   (local path (or (and entry entry.text)
-                  picker.finder.filter.pattern))
+                  (and picker picker.finder.filter.pattern)))
 
-  (picker:close)
+  (if (and picker picker.close) (picker:close))
 
   (if (= (vim.trim path) "")
     (lua :return))
@@ -110,23 +110,25 @@
       (utils.info (.. "Renamed " old-path " to " new-path))
       (utils.error (.. "Failed to rename " old-path)))
 
-    (local pattern picker.finder.filter.pattern)
+    (local pattern (or (and picker
+                            picker.finder.filter.pattern)
+                       ""))
 
-    ; Close the old one
-    (picker:close)
+    (when picker
+      ; Close the old one
+      (picker:close)
 
-    ; Open a fresh picker
-    (M.open pattern))
+      ; Open a fresh picker
+      (M.open pattern)))
 
   (vim.ui.input {:prompt (.. "Rename " old-path)
                  :default old-path}
                 on-rename))
 
 (fn M.delete [picker entry]
-  (local pattern (or
-                   picker.finder.filter.pattern
-                   ""))
-  (picker:close)
+  (local pattern (or (and picker picker.finder.filter.pattern)
+                     ""))
+  (if (and picker picker.close) (picker:close))
 
   (if (not entry) (lua :return))
 
@@ -138,14 +140,17 @@
                          (if ok?
                            (utils.info (.. "Deleted: " path))
                            (utils.error (.. "Failed to delete: " path)))
-                         (vim.schedule #(M.open pattern))))))
+                         (if picker
+                             (vim.schedule #(M.open pattern)))))))
 
 (fn M.copy [entry]
   "Copy the password into the system clipboard"
 
-  (if (not entry) (lua :return))
-
   (local path entry.text)
+
+  (if (= (vim.trim path) "")
+    (lua :return))
+
   (local password (utils.show path))
 
   (vim.fn.setreg :+ password)
@@ -166,24 +171,20 @@
 
 
 (fn M.insert [picker]
-  (local pattern picker.finder.filter.pattern)
-  (picker:close)
+  (local pattern (or (and picker
+                          picker.finder.filter.pattern)
+                     ""))
+  (if (and picker picker.close) (picker:close))
   (vim.ui.input {:prompt "New password's path"
                  :default pattern}
                 (fn [new-path]
                   (M.edit picker {:text new-path}))))
 
 (fn M.open [pattern]
-  (when (not (utils.verify-gpg-auth))
-    (utils.debug "GPG key locked. Attempting to unlock...")
-    (when (not (utils.unlock-gpg-key))
-      (utils.error "Failed to unlock GPG key.")
-      (lua :return)))
-
   (local (ok? snacks-picker) (pcall require :snacks.picker))
 
   (when (not ok?)
-    (utils.error "snacks.nvim is required")
+    (utils.error "snacks.nvim is required to run the picker")
     (lua :return))
 
   (snacks-picker.pick {:title "Password Store"

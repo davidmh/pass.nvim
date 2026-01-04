@@ -33,8 +33,11 @@ local function update_password_on_save(_2_)
   return nil
 end
 M.edit = function(picker, entry)
-  local path = ((entry and entry.text) or picker.finder.filter.pattern)
-  picker:close()
+  local path = ((entry and entry.text) or (picker and picker.finder.filter.pattern))
+  if (picker and picker.close) then
+    picker:close()
+  else
+  end
   if (vim.trim(path) == "") then
     return
   else
@@ -66,10 +69,10 @@ M.edit = function(picker, entry)
   local win = vim.api.nvim_open_win(buf, true, win_config)
   vim.api.nvim_set_option_value("winblend", 0, {win = win})
   utils["disable-backup-options"]()
-  local function _10_()
+  local function _11_()
     return update_password_on_save({buf = buf, path = path, picker = picker, ["old-content"] = content})
   end
-  return vim.api.nvim_create_autocmd("BufWriteCmd", {buffer = buf, callback = _10_})
+  return vim.api.nvim_create_autocmd("BufWriteCmd", {buffer = buf, callback = _11_})
 end
 M.rename = function(picker, entry)
   if not entry then
@@ -88,21 +91,28 @@ M.rename = function(picker, entry)
     else
       utils.error(("Failed to rename " .. old_path))
     end
-    local pattern = picker.finder.filter.pattern
-    picker:close()
-    return M.open(pattern)
+    local pattern = ((picker and picker.finder.filter.pattern) or "")
+    if picker then
+      picker:close()
+      return M.open(pattern)
+    else
+      return nil
+    end
   end
   return vim.ui.input({prompt = ("Rename " .. old_path), default = old_path}, on_rename)
 end
 M.delete = function(picker, entry)
-  local pattern = (picker.finder.filter.pattern or "")
-  picker:close()
+  local pattern = ((picker and picker.finder.filter.pattern) or "")
+  if (picker and picker.close) then
+    picker:close()
+  else
+  end
   if not entry then
     return
   else
   end
   local path = entry.text
-  local function _15_(choice)
+  local function _18_(choice)
     if (choice == "Yes") then
       local ok_3f = pcall(utils.rm, path)
       if ok_3f then
@@ -110,22 +120,26 @@ M.delete = function(picker, entry)
       else
         utils.error(("Failed to delete: " .. path))
       end
-      local function _17_()
-        return M.open(pattern)
+      if picker then
+        local function _20_()
+          return M.open(pattern)
+        end
+        return vim.schedule(_20_)
+      else
+        return nil
       end
-      return vim.schedule(_17_)
     else
       return nil
     end
   end
-  return utils["prompt-bool"](("Delete " .. path .. "?"), _15_)
+  return utils["prompt-bool"](("Delete " .. path .. "?"), _18_)
 end
 M.copy = function(entry)
-  if not entry then
+  local path = entry.text
+  if (vim.trim(path) == "") then
     return
   else
   end
-  local path = entry.text
   local password = utils.show(path)
   vim.fn.setreg("+", password)
   return utils.info(("Copied " .. path))
@@ -135,33 +149,27 @@ M.log = function()
   return snacks_picker.git_log({cwd = utils["get-password-store-dir"]()})
 end
 local function auto_close_picker(action)
-  local function _20_(picker, entry)
+  local function _24_(picker, entry)
     picker:close()
     return action(entry)
   end
-  return _20_
+  return _24_
 end
 M.insert = function(picker)
-  local pattern = picker.finder.filter.pattern
-  picker:close()
-  local function _21_(new_path)
-    return M.edit(picker, {text = new_path})
-  end
-  return vim.ui.input({prompt = "New password's path", default = pattern}, _21_)
-end
-M.open = function(pattern)
-  if not utils["verify-gpg-auth"]() then
-    utils.debug("GPG key locked. Attempting to unlock...")
-    if not utils["unlock-gpg-key"]() then
-      utils.error("Failed to unlock GPG key.")
-      return
-    else
-    end
+  local pattern = ((picker and picker.finder.filter.pattern) or "")
+  if (picker and picker.close) then
+    picker:close()
   else
   end
+  local function _26_(new_path)
+    return M.edit(picker, {text = new_path})
+  end
+  return vim.ui.input({prompt = "New password's path", default = pattern}, _26_)
+end
+M.open = function(pattern)
   local ok_3f, snacks_picker = pcall(require, "snacks.picker")
   if not ok_3f then
-    utils.error("snacks.nvim is required")
+    utils.error("snacks.nvim is required to run the picker")
     return
   else
   end
