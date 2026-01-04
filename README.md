@@ -26,6 +26,7 @@ While in the picker, the following mappings are available:
 | `<C-e>` | Edit entry                  |
 | `<C-r>` | Rename entry                |
 | `<C-d>` | Delete entry                |
+| `<C-i>` | Insert new password         |
 | `<C-l>` | Show password store git log |
 
 ## Requirements & Caveats

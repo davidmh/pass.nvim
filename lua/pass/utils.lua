@@ -145,7 +145,4 @@ end
 M["prompt-bool"] = function(question, action)
   return vim.ui.select({"Yes", "No"}, {prompt = question}, action)
 end
-M.test = function()
-  return M.info("hello")
-end
 return M

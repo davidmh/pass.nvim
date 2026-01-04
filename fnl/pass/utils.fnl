@@ -146,7 +146,4 @@
                  {:prompt question}
                  action))
 
-(fn M.test []
-  (M.info :hello))
-
 M
