@@ -3,10 +3,10 @@
 
 (local M {})
 
-(fn update-password-on-leave [{: buf
-                               : old-content
-                               : path
-                               : picker}]
+(fn update-password-on-save [{: buf
+                              : old-content
+                              : path
+                              : picker}]
   (local new-lines (vim.api.nvim_buf_get_lines buf 0 -1 false))
   (local new-content (table.concat new-lines "\n"))
 
@@ -50,6 +50,9 @@
 
   ;; create a scratch buffer
   (local buf (vim.api.nvim_create_buf false true))
+  (vim.api.nvim_buf_set_name buf (.. "pass://" path))
+  (vim.api.nvim_set_option_value :buftype :acwrite {:scope :local
+                                                    :buf buf})
   (vim.api.nvim_set_option_value :filetype :pass {:scope :local
                                                   :buf buf})
   (vim.api.nvim_set_option_value :bufhidden :wipe {:scope :local
@@ -82,12 +85,12 @@
   (vim.api.nvim_set_option_value :winblend 0 {:win win})
   (utils.disable-backup-options)
 
-  ;; update the pass entry on window close
-  (vim.api.nvim_create_autocmd :BufWinLeave {:buffer buf
-                                             :callback #(update-password-on-leave {: buf
-                                                                                   : path
-                                                                                   : picker
-                                                                                   :old-content content})}))
+  ;; update the pass entry on save
+  (vim.api.nvim_create_autocmd :BufWriteCmd {:buffer buf
+                                             :callback #(update-password-on-save {: buf
+                                                                                  : path
+                                                                                  : picker
+                                                                                  :old-content content})}))
 
 (fn M.rename [picker entry]
   (if (not entry) (lua :return))

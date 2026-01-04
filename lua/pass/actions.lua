@@ -1,7 +1,7 @@
 -- [nfnl] fnl/pass/actions.fnl
 local utils = require("pass.utils")
 local M = {}
-local function update_password_on_leave(_1_)
+local function update_password_on_save(_1_)
   local buf = _1_.buf
   local old_content = _1_["old-content"]
   local path = _1_.path
@@ -51,6 +51,8 @@ M.edit = function(picker, entry)
     label = "Insert"
   end
   local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(buf, ("pass://" .. path))
+  vim.api.nvim_set_option_value("buftype", "acwrite", {scope = "local", buf = buf})
   vim.api.nvim_set_option_value("filetype", "pass", {scope = "local", buf = buf})
   vim.api.nvim_set_option_value("bufhidden", "wipe", {scope = "local", buf = buf})
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content, "\n"))
@@ -63,9 +65,9 @@ M.edit = function(picker, entry)
   vim.api.nvim_set_option_value("winblend", 0, {win = win})
   utils["disable-backup-options"]()
   local function _9_()
-    return update_password_on_leave({buf = buf, path = path, picker = picker, ["old-content"] = content})
+    return update_password_on_save({buf = buf, path = path, picker = picker, ["old-content"] = content})
   end
-  return vim.api.nvim_create_autocmd("BufWinLeave", {buffer = buf, callback = _9_})
+  return vim.api.nvim_create_autocmd("BufWriteCmd", {buffer = buf, callback = _9_})
 end
 M.rename = function(picker, entry)
   if not entry then
