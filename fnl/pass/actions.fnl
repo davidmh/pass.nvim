@@ -1,7 +1,8 @@
 (import-macros {: tx} :pass.macros)
+(local {: define} (require :pass.module))
 (local utils (require :pass.utils))
 
-(local M {})
+(local M (define :pass.utils {}))
 
 (fn update-password-on-save [{: buf
                               : old-content

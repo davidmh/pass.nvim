@@ -1,4 +1,6 @@
-(local M {})
+(local {: define} (require :pass.module))
+
+(local M (define :pass.utils {}))
 
 (local notification-chrome {:icon :🛂
                             :title :pass.nvim})
@@ -143,5 +145,8 @@
   (vim.ui.select [:Yes :No]
                  {:prompt question}
                  action))
+
+(fn M.test []
+  (M.info :hello))
 
 M

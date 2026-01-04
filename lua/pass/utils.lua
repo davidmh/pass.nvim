@@ -1,5 +1,7 @@
 -- [nfnl] fnl/pass/utils.fnl
-local M = {}
+local _local_1_ = require("pass.module")
+local define = _local_1_.define
+local M = define("pass.utils", {})
 local notification_chrome = {icon = "\240\159\155\130", title = "pass.nvim"}
 local function read_lines(path)
   if (vim.fn.filereadable(path) == 1) then
@@ -33,12 +35,12 @@ local function is_cached_3f(keygrip)
   if (result.code == 0) then
     local lines = vim.split(vim.trim(result.stdout), "\n")
     for _, line in ipairs(lines) do
-      local case_4_ = vim.split(line, " ")
-      if ((_G.type(case_4_) == "table") and (case_4_[1] == "S") and (case_4_[2] == "KEYINFO") and true and true and true and true and (case_4_[7] == "1")) then
-        local _0 = case_4_[3]
-        local _1 = case_4_[4]
-        local _2 = case_4_[5]
-        local _3 = case_4_[6]
+      local case_5_ = vim.split(line, " ")
+      if ((_G.type(case_5_) == "table") and (case_5_[1] == "S") and (case_5_[2] == "KEYINFO") and true and true and true and true and (case_5_[7] == "1")) then
+        local _0 = case_5_[3]
+        local _1 = case_5_[4]
+        local _2 = case_5_[5]
+        local _3 = case_5_[6]
         return true
       else
       end
@@ -85,18 +87,18 @@ M["list-passwords"] = function()
   local store_dir = M["get-password-store-dir"]()
   local extension = ".gpg$"
   local files
-  local function _11_(name)
+  local function _12_(name)
     return name:match(extension)
   end
-  files = vim.fs.find(_11_, {path = store_dir, limit = math.huge})
-  local function _12_(file)
+  files = vim.fs.find(_12_, {path = store_dir, limit = math.huge})
+  local function _13_(file)
     return {text = string.gsub(string.sub(file, (#store_dir + 1), #file), extension, "")}
   end
-  return vim.tbl_map(_12_, files)
+  return vim.tbl_map(_13_, files)
 end
-local function run(_13_)
-  local cmd = _13_.cmd
-  local stdin = _13_.stdin
+local function run(_14_)
+  local cmd = _14_.cmd
+  local stdin = _14_.stdin
   local result = vim.system(cmd, {text = true, stdin = stdin}):wait()
   if (result.code == 0) then
     return result.stdout:gsub("\n$", "")
@@ -142,5 +144,8 @@ M.debug = function(msg)
 end
 M["prompt-bool"] = function(question, action)
   return vim.ui.select({"Yes", "No"}, {prompt = question}, action)
+end
+M.test = function()
+  return M.info("hello")
 end
 return M
